@@ -1,0 +1,44 @@
+### Register Brand
+POST http://localhost:8082/api/v1/brands/register
+Content-Type: application/json
+
+{
+    "name": "Spicy Delights",
+    "logoUrl": "https://example.com/logo.png",
+    "corporatePhone": "+919999988888",
+    "cuisineType": "Indian"
+}
+
+> {%
+    client.global.set("brandId", response.body.data.brandId);
+%}
+
+### Register Outlet
+POST http://localhost:8082/api/v1/outlets
+Content-Type: application/json
+
+{
+    "brandId": "{{brandId}}",
+    "street": "123 Food Street",
+    "locality": "Koramangala",
+    "city": "Bengaluru",
+    "state": "Karnataka",
+    "postalCode": "560034",
+    "country": "India",
+    "locationName": "Koramangala 5th Block",
+    "latitude": 12.9352,
+    "longitude": 77.6245
+}
+
+> {%
+    client.global.set("outletId", response.body.data.outletId);
+%}
+
+### Get Brand By ID
+GET http://localhost:8082/api/v1/brands?brandId={{brandId}}
+
+### Get Outlet By ID
+GET http://localhost:8082/api/v1/outlets?outletId={{outletId}}
+
+### Validate Outlet
+GET http://localhost:8082/api/v1/outlets/validate?outletId={{outletId}}

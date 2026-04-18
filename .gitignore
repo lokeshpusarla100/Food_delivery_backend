@@ -1,0 +1,23 @@
+# Default ignored files
+/shelf/
+/.idea/workspace.xml
+.idea/
+*.iml
+out/
+target/
+
+
+
+logs/
+*.log
+
+.DS_Store
+Thumbs.db
+.vscode/
+*.code-workspace
+run.sh
+Notes/
+
+# Local Documentation
+helper.md
+PROJECT_PROGRESS.md

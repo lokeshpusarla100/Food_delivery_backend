@@ -1,0 +1,35 @@
+### Create Order
+POST http://localhost:8083/api/v1/orders
+Content-Type: application/json
+
+{
+  "userId": "6b03ebcc-d08d-446f-a3a3-ac015ef9cd37",
+  "outletId": "out123",
+  "orderType": "ASAP",
+  "deliveryAddress": {
+    "addressLine1": "123 Main St",
+    "addressLine2": "Apt 4B",
+    "city": "Metropolis",
+    "state": "NY",
+    "postalCode": "10001",
+    "country": "USA",
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "landmark": "Near Central Park"
+  },
+  "instructions": "Leave at door",
+  "items": [
+    {
+      "catalogItemId": "item456",
+      "quantity": 2,
+      "modifiers": [
+        {
+          "catalogModifierId": "mod789"
+        }
+      ],
+      "instructions": "Extra spicy"
+    }
+  ],
+  "promoCode": "SUMMER2024",
+  "idempotencyKey": "key-unique-123456"
+}
