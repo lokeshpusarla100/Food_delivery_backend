@@ -21,3 +21,13 @@ Notes/
 # Local Documentation
 helper.md
 PROJECT_PROGRESS.md
+
+# Jenkins/staging/local secrets (never commit credentials)
+.env
+.env.*
+!*.env.example
+**/staging.env
+infra/jenkins/secrets/
+infra/jenkins/jenkins_home/
+*.pem
+*.key
