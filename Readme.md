@@ -6,7 +6,7 @@ A production-grade, distributed food delivery platform built with a focus on hig
 
 ### Core Frameworks
 *   **Java 17** (LTS)
-*   **Spring Boot 3.2.0**
+*   **Spring Boot 3.2.2**
 *   **Spring Cloud 2023.0.0** (Eureka, Gateway, OpenFeign, Resilience4j)
 
 ### Persistence & Messaging
