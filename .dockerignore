@@ -1,0 +1,12 @@
+# Keep project source and Maven build outputs available to the existing Dockerfile
+# and the Jenkins runtime-only Dockerfile. Exclude only incidental local files.
+.git
+.github
+.idea
+.vscode
+**/.DS_Store
+**/target/surefire-reports
+**/target/failsafe-reports
+**/target/test-classes
+**/target/*.jar.original
+infra/jenkins/jenkins_home

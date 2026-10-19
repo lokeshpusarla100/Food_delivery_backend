@@ -1,0 +1,17 @@
+name: food-delivery-jenkins
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=true"
+    # Never bind /var/run/docker.sock to the controller.
+    # Use a separate, hardened Jenkins build agent for Docker builds.
+volumes:
+  jenkins_home:

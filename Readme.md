@@ -69,6 +69,14 @@ graph TD
 
 ---
 
+## 🔧 Jenkins CI/CD
+
+Jenkins configuration is available in [JENKINS.md](JENKINS.md), with detailed setup and security controls in [docs/jenkins-setup.md](docs/jenkins-setup.md). The multibranch pipeline definition is [Jenkinsfile](Jenkinsfile).
+
+This is committed infrastructure-as-code. The live Jenkins controller, build agents, GitHub webhook, image registry credentials and staging secrets must be configured separately. CI/CD infrastructure alone does not establish production readiness.
+
+---
+
 ## 🚀 Local Development
 
 ### Prerequisites
