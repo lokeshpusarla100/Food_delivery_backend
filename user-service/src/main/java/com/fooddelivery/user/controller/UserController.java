@@ -30,11 +30,11 @@ public class UserController {
     }
     // Legacy lookups are strictly service-to-service, never available to customer JWTs.
     @GetMapping("/get-by-id")
-    public ApiResponse<UserResponse> getById(@RequestParam String userId) {
+    public ApiResponse<UserResponse> getById(@RequestParam("userId") String userId) {
         return ApiResponse.success(users.getUserById(userId),"User fetched");
     }
     @GetMapping("/get-by-email")
-    public ApiResponse<UserResponse> getByEmail(@RequestParam String email) {
+    public ApiResponse<UserResponse> getByEmail(@RequestParam("email") String email) {
         return ApiResponse.success(users.getUserByEmail(email),"User fetched");
     }
 }

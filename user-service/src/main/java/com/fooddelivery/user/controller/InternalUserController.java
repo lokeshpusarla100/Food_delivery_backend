@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 public class InternalUserController {
     private final UserService users;
     @GetMapping("/{userId}")
-    public ApiResponse<UserResponse> get(@PathVariable String userId) {
+    public ApiResponse<UserResponse> get(@PathVariable("userId") String userId) {
         return ApiResponse.success(users.getUserById(userId),"User fetched");
     }
 }
