@@ -56,10 +56,12 @@ class UserServiceIntegrationTest {
         String oldRefresh=login.get("refreshToken").asText();
         mvc.perform(get("/api/v1/users/me").header("Authorization","Bearer "+access))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data.email").value(email));
-        String address=json.writeValueAsString(java.util.Map.of(
-            "label","Home","streetLine1","Street 2","locality","Gachibowli",
-            "city","Hyderabad","state","Telangana","zipCode","500032","country","India",
-            "latitude",17.4435,"longitude",78.3772,"makeDefault",true));
+        String address=json.writeValueAsString(java.util.Map.ofEntries(
+            java.util.Map.entry("label","Home"),java.util.Map.entry("streetLine1","Street 2"),
+            java.util.Map.entry("locality","Gachibowli"),java.util.Map.entry("city","Hyderabad"),
+            java.util.Map.entry("state","Telangana"),java.util.Map.entry("zipCode","500032"),
+            java.util.Map.entry("country","India"),java.util.Map.entry("latitude",17.4435),
+            java.util.Map.entry("longitude",78.3772),java.util.Map.entry("makeDefault",true)));
         mvc.perform(post("/api/v1/users/me/addresses").header("Authorization","Bearer "+access)
             .contentType(MediaType.APPLICATION_JSON).content(address))
             .andExpect(status().isCreated())
