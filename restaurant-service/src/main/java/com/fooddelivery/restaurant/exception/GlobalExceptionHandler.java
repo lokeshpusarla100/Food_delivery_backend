@@ -1,50 +1,36 @@
 package com.fooddelivery.restaurant.exception;
 
 import com.fooddelivery.commons.dto.ApiResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
+import org.slf4j.*;
+import org.springframework.dao.*;
+import org.springframework.http.*;
+import org.springframework.validation.*;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ApiResponse<Object>> handleResourceNotFound(ResourceNotFoundException ex) {
-        return new ResponseEntity<>(
-                ApiResponse.error("NOT_FOUND", ex.getMessage()),
-                HttpStatus.NOT_FOUND);
+    private static final Logger log=LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    @ExceptionHandler(DomainException.class)
+    public ResponseEntity<ApiResponse<Void>> domain(DomainException e){
+        return ResponseEntity.status(e.status()).body(ApiResponse.error(e.code(),e.getMessage()));
     }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-
-        return new ResponseEntity<>(
-                ApiResponse.error("VALIDATION_ERROR", "Validation failed: " + errors),
-                HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ApiResponse<Void>> validation(MethodArgumentNotValidException e){
+        String names=e.getBindingResult().getFieldErrors().stream().map(FieldError::getField)
+            .distinct().sorted().collect(Collectors.joining(","));
+        return ResponseEntity.badRequest().body(ApiResponse.error("INVALID_INPUT","Invalid fields: "+names));
     }
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Object>> handleRuntime(RuntimeException ex) {
-        return new ResponseEntity<>(
-                ApiResponse.error("INTERNAL_ERROR", ex.getMessage()),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    @ExceptionHandler({DataIntegrityViolationException.class,DuplicateKeyException.class})
+    public ResponseEntity<ApiResponse<Void>> conflict(Exception e){
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+          .body(ApiResponse.error("CONFLICT","A conflicting resource already exists"));
     }
-
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleException(Exception ex) {
-        return new ResponseEntity<>(
-                ApiResponse.error("INTERNAL_ERROR", "An unexpected error occurred: " + ex.getMessage()),
-                HttpStatus.INTERNAL_SERVER_ERROR);
+    public ResponseEntity<ApiResponse<Void>> generic(Exception e){
+        log.error("Unhandled Restaurant Service failure",e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(ApiResponse.error("INTERNAL_ERROR","An unexpected error occurred"));
     }
 }

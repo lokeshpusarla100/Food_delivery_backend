@@ -1,25 +1,56 @@
 spring:
-  profiles:
-    active: local
-
   application:
     name: restaurant-service
-
+  profiles:
+    default: local
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+  datasource:
+    hikari:
+      maximum-pool-size: ${RESTAURANT_DB_POOL_MAX:15}
+      minimum-idle: ${RESTAURANT_DB_POOL_MIN:2}
+      connection-timeout: 3000
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
     hibernate:
       ddl-auto: none
-    properties:
-      hibernate:
-        format_sql: true
-
   flyway:
     enabled: true
-    baseline-on-migrate: true
+    baseline-on-migrate: false
     locations: classpath:db/migration
-
+restaurant:
+  outbox:
+    enabled: ${RESTAURANT_OUTBOX_ENABLED:false}
+    poll-ms: 1000
+    topic: restaurant.catalog.events.v1
+security:
+  jwt:
+    secret: ${USER_JWT_SECRET:}
+    issuer: ${USER_JWT_ISSUER:food-delivery-user-service}
+    audience: ${USER_JWT_AUDIENCE:food-delivery-api}
+  restaurant:
+    platform-key: ${RESTAURANT_PLATFORM_ADMIN_KEY:}
+    internal-key: ${RESTAURANT_INTERNAL_API_KEY:}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+server:
+  shutdown: graceful
 logging:
   level:
-    com.fooddelivery: DEBUG
-    org.springframework.web: INFO
-    org.hibernate.SQL: INFO
+    com.fooddelivery: INFO
+    org.springframework.security: WARN
