@@ -11,7 +11,7 @@ public class RefreshSession {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Column(name="token_id")
     private Long tokenId;
-    @Column(name="user_id", nullable=false, length=36)
+    @Column(name="user_id", nullable=false, length=36, columnDefinition="CHAR(36)")
     private String userId;
     @Column(name="device_id", length=255)
     private String deviceId;
