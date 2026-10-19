@@ -33,7 +33,7 @@ public class SecurityConfig {
     @Bean org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
         return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(12);
     }
-    @Bean SecretKeySpec signingKey(@Value("${security.jwt.secret}") String secret) {
+    @Bean public SecretKeySpec signingKey(@Value("${security.jwt.secret}") String secret) {
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
         if (bytes.length < 32) throw new IllegalStateException("USER_JWT_SECRET must be at least 32 UTF-8 bytes");
         return new SecretKeySpec(bytes, "HmacSHA256");
@@ -52,7 +52,7 @@ public class SecurityConfig {
                 audiences != null && audiences.contains(audience))));
         return decoder;
     }
-    @Bean Converter<Jwt, JwtAuthenticationToken> jwtAuthenticationConverter(UserRepository users) {
+    @Bean public Converter<Jwt, JwtAuthenticationToken> jwtAuthenticationConverter(UserRepository users) {
         return jwt -> {
             User user = users.findById(jwt.getSubject())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
