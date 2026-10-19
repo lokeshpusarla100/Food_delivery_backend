@@ -1,77 +1,96 @@
 package com.fooddelivery.user.service;
 
-import com.fooddelivery.user.dto.UserRegistrationRequest;
-import com.fooddelivery.user.dto.UserResponse;
+import com.fooddelivery.user.dto.*;
+import com.fooddelivery.user.dto.AuthDtos.ProfileUpdateRequest;
 import com.fooddelivery.user.entity.User;
-import com.fooddelivery.user.repository.UserRepository;
+import com.fooddelivery.user.exception.ApiException;
+import com.fooddelivery.user.repository.*;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
+@Service @RequiredArgsConstructor
 public class UserService {
+    private final UserRepository users;
+    private final RefreshSessionRepository sessions;
+    private final PasswordEncoder passwords;
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-
+    public static String normalizedEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+    public static void validatePassword(String raw) {
+        if (raw == null || raw.length() < 12 || raw.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_PASSWORD",
+                "Password must be at least 12 characters and at most 72 UTF-8 bytes");
+        }
+    }
     @Transactional
     public UserResponse registerUser(UserRegistrationRequest request) {
-        log.debug("Registering new user with email: {}", request.getEmail());
-
-        // 1. Check if user already exists
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already in use");
+        validatePassword(request.getPassword());
+        String email = normalizedEmail(request.getEmail());
+        if (users.existsByEmail(email) || users.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new ApiException(HttpStatus.CONFLICT,"USER_EXISTS","An account with these details already exists");
         }
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new RuntimeException("Phone number already in use");
-        }
-
-        // 2. Build User entity from request
         User user = User.builder()
-                .email(request.getEmail())
-                .phoneNumber(request.getPhoneNumber())
-                .fullName(request.getFullName())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .build();
-
-        // 3. Save to database
-        User savedUser = userRepository.save(user);
-        log.info("Successfully registered user with ID: {}", savedUser.getUserId());
-
-        // 4. Return response DTO
-        return mapToResponse(savedUser);
+            .email(email)
+            .phoneNumber(request.getPhoneNumber())
+            .fullName(request.getFullName().trim())
+            .passwordHash(passwords.encode(request.getPassword()))
+            .isActive(true).isVerified(false).build();
+        return toResponse(users.saveAndFlush(user));
     }
-
-    @Transactional(readOnly = true)
+    @Transactional(readOnly=true)
     public UserResponse getUserById(String userId) {
-        log.debug("Fetching user by ID: {}", userId);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-        return mapToResponse(user);
+        return toResponse(requireUser(userId));
     }
-
-    @Transactional(readOnly = true)
+    @Transactional(readOnly=true)
     public UserResponse getUserByEmail(String email) {
-        log.debug("Fetching user by email: {}", email);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-        return mapToResponse(user);
+        User user=users.findByEmail(normalizedEmail(email))
+            .orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","User not found"));
+        return toResponse(user);
     }
-
-    // Helper method to convert Entity -> Response DTO
-    private UserResponse mapToResponse(User user) {
-        return UserResponse.builder()
-                .userId(user.getUserId())
-                .email(user.getEmail())
-                .phoneNumber(user.getPhoneNumber())
-                .fullName(user.getFullName())
-                .isVerified(user.isVerified())
-                .isActive(user.isActive())
-                .createdAt(user.getCreatedAt())
-                .build();
+    @Transactional
+    public UserResponse updateMyProfile(String id, ProfileUpdateRequest request) {
+        User user = requireActiveUser(id);
+        if(request.fullName()!=null) {
+            if(request.fullName().isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_NAME","Full name is required");
+            user.setFullName(request.fullName().trim());
+        }
+        if(request.phoneNumber()!=null) {
+            if(users.existsByPhoneNumberAndUserIdNot(request.phoneNumber(), id))
+                throw new ApiException(HttpStatus.CONFLICT,"PHONE_EXISTS","Phone number already in use");
+            user.setPhoneNumber(request.phoneNumber());
+        }
+        return toResponse(users.saveAndFlush(user));
+    }
+    @Transactional
+    public void deactivate(String id, String password) {
+        User user = requireActiveUser(id);
+        if(!passwords.matches(password, user.getPasswordHash()))
+            throw new ApiException(HttpStatus.UNAUTHORIZED,"INVALID_CREDENTIALS","Invalid credentials");
+        user.setActive(false);
+        user.setTokenVersion(user.getTokenVersion()+1);
+        sessions.revokeAll(id);
+        users.save(user);
+    }
+    public User requireUser(String id) {
+        return users.findById(id)
+            .orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"NOT_FOUND","User not found"));
+    }
+    public User requireActiveUser(String id) {
+        User user = requireUser(id);
+        if(!user.isActive()) throw new ApiException(HttpStatus.FORBIDDEN,"ACCOUNT_DISABLED","Account is disabled");
+        return user;
+    }
+    public static UserResponse toResponse(User user) {
+        return UserResponse.builder().userId(user.getUserId()).email(user.getEmail())
+            .phoneNumber(user.getPhoneNumber()).fullName(user.getFullName())
+            .isVerified(user.isVerified()).isActive(user.isActive())
+            .createdAt(user.getCreatedAt()).build();
     }
 }
