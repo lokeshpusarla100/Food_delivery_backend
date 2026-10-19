@@ -17,7 +17,7 @@ public class AddressService {
     private final UserService users;
 
     private static final String SELECT = "SELECT address_id,label,street_line1,street_line2,locality,city,state,zip_code,country,"
-        +"ST_Y(location_point) latitude,ST_X(location_point) longitude,is_default "
+        +"ST_Latitude(location_point) latitude,ST_Longitude(location_point) longitude,is_default "
         +"FROM saved_addresses WHERE user_id=? ";
     private static final RowMapper<AddressResponse> MAPPER=(rs,num)->new AddressResponse(
         rs.getLong("address_id"),rs.getString("label"),rs.getString("street_line1"),
@@ -41,13 +41,12 @@ public class AddressService {
         jdbc.update(connection->{
             PreparedStatement ps=connection.prepareStatement(
                 "INSERT INTO saved_addresses (user_id,label,street_line1,street_line2,locality,city,state,zip_code,country,location_point,is_default) "
-                +"VALUES (?,?,?,?,?,?,?,?,?,ST_SRID(POINT(?,?),4326),?)",Statement.RETURN_GENERATED_KEYS);
+                +"VALUES (?,?,?,?,?,?,?,?,?,ST_GeomFromText(?,4326,'axis-order=long-lat'),?)",Statement.RETURN_GENERATED_KEYS);
             ps.setString(1,userId);ps.setString(2,req.label().trim());
             ps.setString(3,req.streetLine1());ps.setString(4,req.streetLine2());
             ps.setString(5,req.locality());ps.setString(6,req.city());
             ps.setString(7,req.state());ps.setString(8,req.zipCode());
-            ps.setString(9,req.country());ps.setDouble(10,req.longitude());
-            ps.setDouble(11,req.latitude());ps.setBoolean(12,makeDefault);
+            ps.setString(9,req.country());ps.setString(10,toWkt(req));ps.setBoolean(11,makeDefault);
             return ps;
         },keys);
         if(keys.getKey()==null) throw new IllegalStateException("Address ID not returned");
@@ -59,10 +58,10 @@ public class AddressService {
         ensureExists(userId,addressId);
         if(req.makeDefault()) clearDefault(userId);
         int n=jdbc.update("UPDATE saved_addresses SET label=?,street_line1=?,street_line2=?,locality=?,city=?,state=?,"
-            +"zip_code=?,country=?,location_point=ST_SRID(POINT(?,?),4326),"
+            +"zip_code=?,country=?,location_point=ST_GeomFromText(?,4326,'axis-order=long-lat'),"
             +"is_default=IF(?,TRUE,is_default) WHERE user_id=? AND address_id=?",
             req.label().trim(),req.streetLine1(),req.streetLine2(),req.locality(),req.city(),
-            req.state(),req.zipCode(),req.country(),req.longitude(),req.latitude(),
+            req.state(),req.zipCode(),req.country(),toWkt(req),
             req.makeDefault(),userId,addressId);
         if(n!=1) throw notFound();
         return get(userId,addressId);
@@ -101,6 +100,10 @@ public class AddressService {
         if(jdbc.query("SELECT user_id FROM users WHERE user_id=? AND is_active=TRUE FOR UPDATE",
             (rs,n)->rs.getString(1),id).isEmpty())
             throw new ApiException(HttpStatus.FORBIDDEN,"ACCOUNT_DISABLED","Account not found or disabled");
+    }
+    private static String toWkt(AddressRequest req) {
+        // Force lon-lat input; EPSG:4326's default WKT axis order is lat-lon.
+        return "POINT(" + req.longitude() + " " + req.latitude() + ")";
     }
     private ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND,"ADDRESS_NOT_FOUND","Address not found");
