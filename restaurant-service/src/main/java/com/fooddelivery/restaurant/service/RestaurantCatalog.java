@@ -23,7 +23,7 @@ public class RestaurantCatalog {
         +"o.postal_code,o.country,o.latitude,o.longitude,o.timezone,o.prep_minutes,o.delivery_radius_km,"
         +"o.is_active,o.is_accepting_orders,o.version";
     private static final String OUTLET_BASE="SELECT "+OUTLET_COLUMNS+" FROM outlets o ";
-    private final RowMapper<OutletView> outletMapper=(rs,n)->{
+    private RowMapper<OutletView> outletMapper(){ return (rs,n)->{
         String id=rs.getString("outlet_id"),zone=rs.getString("timezone");
         boolean active=rs.getBoolean("is_active");
         boolean accepting=rs.getBoolean("is_accepting_orders");
@@ -33,7 +33,7 @@ public class RestaurantCatalog {
             rs.getBigDecimal("latitude"),rs.getBigDecimal("longitude"),zone,
             rs.getInt("prep_minutes"),rs.getBigDecimal("delivery_radius_km"),
             active,accepting,active && hours.isOpen(id,zone,accepting),rs.getLong("version"));
-    };
+    }; }
 
     private static DomainException notFound(String type) {
         return new DomainException(HttpStatus.NOT_FOUND,type.toUpperCase()+"_NOT_FOUND",type+" not found");
@@ -121,7 +121,7 @@ public class RestaurantCatalog {
         uuid(id);
         return jdbc.query(OUTLET_BASE+"JOIN brands b ON b.brand_id=o.brand_id "
            +"WHERE o.outlet_id=? AND o.is_active=TRUE AND b.is_active=TRUE",
-           outletMapper,id).stream().findFirst().orElseThrow(()->notFound("outlet"));
+           outletMapper(),id).stream().findFirst().orElseThrow(()->notFound("outlet"));
     }
     @Transactional(readOnly=true)
     public boolean outletExists(String id) {
@@ -135,7 +135,7 @@ public class RestaurantCatalog {
         uuid(brandId);page(limit,offset);
         var list=jdbc.query(OUTLET_BASE+"JOIN brands b ON b.brand_id=o.brand_id WHERE o.brand_id=? "
             +"AND o.is_active=TRUE AND b.is_active=TRUE ORDER BY o.outlet_id LIMIT ? OFFSET ?",
-            outletMapper,brandId,limit,offset);
+            outletMapper(),brandId,limit,offset);
         return new PageView<>(list,limit,offset);
     }
     @Transactional(readOnly=true)
@@ -144,7 +144,7 @@ public class RestaurantCatalog {
         if(city==null||city.isBlank()) throw new DomainException(HttpStatus.BAD_REQUEST,"CITY_REQUIRED","City required");
         var list=jdbc.query(OUTLET_BASE+"JOIN brands b ON b.brand_id=o.brand_id "
             +"WHERE o.city=? AND o.is_active=TRUE AND b.is_active=TRUE "
-            +"ORDER BY o.outlet_id LIMIT ? OFFSET ?",outletMapper,city.trim(),limit,offset);
+            +"ORDER BY o.outlet_id LIMIT ? OFFSET ?",outletMapper(),city.trim(),limit,offset);
         return new PageView<>(list,limit,offset);
     }
     @Transactional(readOnly=true)
@@ -165,7 +165,7 @@ public class RestaurantCatalog {
             +"AND o.latitude BETWEEN ? AND ? AND o.longitude BETWEEN ? AND ? "
             +"AND ST_Distance_Sphere(o.location_point,ST_GeomFromText(?,4326,'axis-order=long-lat'))<=? "
             +"ORDER BY ST_Distance_Sphere(o.location_point,ST_GeomFromText(?,4326,'axis-order=long-lat')),o.outlet_id LIMIT ?",
-            outletMapper,lat-latDelta,lat+latDelta,lon-lonDelta,lon+lonDelta,wkt,range*1000,wkt,limit);
+            outletMapper(),lat-latDelta,lat+latDelta,lon-lonDelta,lon+lonDelta,wkt,range*1000,wkt,limit);
         return new PageView<>(result,limit,0);
     }
     @Transactional

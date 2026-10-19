@@ -3,6 +3,16 @@ spring:
     name: restaurant-service
   profiles:
     default: local
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
   datasource:
     hikari:
       maximum-pool-size: ${RESTAURANT_DB_POOL_MAX:15}
@@ -16,6 +26,11 @@ spring:
     enabled: true
     baseline-on-migrate: false
     locations: classpath:db/migration
+restaurant:
+  outbox:
+    enabled: ${RESTAURANT_OUTBOX_ENABLED:false}
+    poll-ms: 1000
+    topic: restaurant.catalog.events.v1
 security:
   jwt:
     secret: ${USER_JWT_SECRET:}
