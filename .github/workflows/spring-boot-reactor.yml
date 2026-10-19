@@ -1,0 +1,42 @@
+name: Spring Boot Reactor Compatibility
+on:
+  pull_request:
+    paths:
+      - 'pom.xml'
+      - '*/pom.xml'
+      - '.github/workflows/spring-boot-reactor.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'pom.xml'
+      - '*/pom.xml'
+      - '.github/workflows/spring-boot-reactor.yml'
+permissions:
+  contents: read
+jobs:
+  build-reactor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Verify all Maven modules resolve Spring Boot 3.2.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t modules < <(sed -n 's/.*<module>\([^<]*\)<\/module>.*/\1/p' pom.xml)
+          test "${#modules[@]}" -eq 12
+          for module in "." "${modules[@]}"; do
+            version=$(mvn -B -ntp -q -f "$module/pom.xml" help:evaluate -Dexpression=spring.boot.version -DforceStdout)
+            test "$version" = "3.2.2" || {
+              echo "Unexpected Boot version for $module: $version" >&2
+              exit 1
+            }
+            echo "$module => Spring Boot $version"
+          done
+      - name: Compile and package all reactor modules
+        run: mvn -B -ntp -DskipTests package
