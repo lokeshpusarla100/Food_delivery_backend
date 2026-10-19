@@ -52,7 +52,7 @@ public class SecurityConfig {
                 audiences != null && audiences.contains(audience))));
         return decoder;
     }
-    @Bean public Converter<Jwt, JwtAuthenticationToken> jwtAuthenticationConverter(UserRepository users) {
+    public Converter<Jwt, JwtAuthenticationToken> jwtAuthenticationConverter(UserRepository users) {
         return jwt -> {
             User user = users.findById(jwt.getSubject())
                 .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
