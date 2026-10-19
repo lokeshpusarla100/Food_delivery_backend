@@ -150,6 +150,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/user_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      USER_JWT_SECRET: ${USER_JWT_SECRET:?Set a strong USER_JWT_SECRET}
+      USER_INTERNAL_API_KEY: ${USER_INTERNAL_API_KEY:?Set an internal service key}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
 
   restaurant-service:
@@ -184,6 +186,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/order_db
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      USER_INTERNAL_API_KEY: ${USER_INTERNAL_API_KEY:?Set an internal service key}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
 
   payment-service:

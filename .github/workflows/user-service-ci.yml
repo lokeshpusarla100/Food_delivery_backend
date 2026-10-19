@@ -1,0 +1,31 @@
+name: User Service CI
+on:
+  pull_request:
+    paths:
+      - 'user-service/**'
+      - 'commons/**'
+      - 'pom.xml'
+      - '.github/workflows/user-service-ci.yml'
+  push:
+    branches: [main, feat/user-service-identity-security]
+    paths:
+      - 'user-service/**'
+      - 'commons/**'
+      - 'pom.xml'
+      - '.github/workflows/user-service-ci.yml'
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: User service unit tests
+        run: mvn -B -ntp -pl user-service -am test
+      - name: Compile and package service
+        run: mvn -B -ntp -pl user-service -am package -DskipTests
