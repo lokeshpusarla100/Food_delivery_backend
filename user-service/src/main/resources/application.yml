@@ -1,25 +1,54 @@
 spring:
-  profiles:
-    active: local
-
   application:
     name: user-service
-
+  profiles:
+    default: local
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    open-in-view: false
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
-
+        jdbc:
+          time_zone: UTC
   flyway:
     enabled: true
-    baseline-on-migrate: true
+    baseline-on-migrate: false
     locations: classpath:db/migration
-
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:25}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: ${SMTP_AUTH:false}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+security:
+  jwt:
+    issuer: ${USER_JWT_ISSUER:food-delivery-user-service}
+    audience: ${USER_JWT_AUDIENCE:food-delivery-api}
+    secret: ${USER_JWT_SECRET:}
+    access-ttl: PT15M
+    refresh-ttl: P14D
+  internal:
+    api-key: ${USER_INTERNAL_API_KEY:}
+  auth:
+    max-failures: 5
+    failure-window: PT15M
+    email-from: ${USER_EMAIL_FROM:}
+    public-base-url: ${USER_PUBLIC_BASE_URL:}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+server:
+  shutdown: graceful
 logging:
   level:
-    com.fooddelivery: DEBUG
-    org.springframework.web: INFO
-    org.hibernate.SQL: INFO
+    com.fooddelivery: INFO
+    org.springframework.security: WARN

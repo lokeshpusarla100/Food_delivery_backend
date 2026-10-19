@@ -1,50 +1,37 @@
 package com.fooddelivery.user.exception;
 
 import com.fooddelivery.commons.dto.ApiResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.*;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    // Handle "User not found" or other runtime exceptions
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ApiResponse<Object>> handleRuntimeException(RuntimeException ex) {
-        // If it's a "not found" type of message, return 404
-        if (ex.getMessage().contains("not found")) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error("NOT_FOUND", ex.getMessage()));
-        }
-        // Otherwise return 400 or 500
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("BAD_REQUEST", ex.getMessage()));
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiResponse<Void>> api(ApiException ex) {
+        return ResponseEntity.status(ex.status()).body(ApiResponse.error(ex.code(),ex.getMessage()));
     }
-
-    // Handle Validation Errors (@NotNull, @Email, etc.)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(
-            MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("VALIDATION_FAILED", "Input validation failed: " + errors));
+    public ResponseEntity<ApiResponse<Void>> validation(MethodArgumentNotValidException ex) {
+        String fields = ex.getBindingResult().getFieldErrors().stream()
+            .map(FieldError::getField).distinct().sorted().collect(Collectors.joining(", "));
+        return ResponseEntity.badRequest().body(ApiResponse.error("VALIDATION_FAILED","Invalid fields: " + fields));
     }
-
-    // Handle other general exceptions
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> duplicate(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error("CONFLICT","Resource already exists"));
+    }
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleGeneralException(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> general(Exception ex) {
+        log.error("Unhandled user-service exception",ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("INTERNAL_ERROR", "An unexpected error occurred: " + ex.getMessage()));
+            .body(ApiResponse.error("INTERNAL_ERROR","An unexpected error occurred"));
     }
 }
