@@ -13,12 +13,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.*;
 
 @Service @RequiredArgsConstructor
 public class AuthService {
+    private static final Logger log=LoggerFactory.getLogger(AuthService.class);
     private final UserRepository users;
     private final RefreshSessionRepository sessions;
     private final LoginAttemptRepository loginAttempts;
@@ -125,6 +128,7 @@ public class AuthService {
     public void requestEmailVerification(String userId) {
         User user=users.findById(userId).orElseThrow(this::invalidCredentials);
         if(!user.isActive() || user.isVerified()) return;
+        if(verifyTokens.countByUserIdAndCreatedAtAfter(userId, LocalDateTime.now(clock).minusMinutes(5))>0) return;
         String raw=tokens.newToken();
         EmailVerificationToken token=new EmailVerificationToken();
         token.setUserId(userId);token.setTokenHash(tokens.hash(raw));
@@ -154,8 +158,14 @@ public class AuthService {
             token.setUserId(user.getUserId());token.setTokenHash(tokens.hash(raw));
             token.setCreatedAt(LocalDateTime.now(clock));
             token.setExpiresAt(LocalDateTime.now(clock).plusMinutes(20));
-            resetTokens.save(token);
-            emailSender.sendToken(user.getEmail(),"password-reset",raw);
+            PasswordResetToken saved=resetTokens.save(token);
+            try {
+                emailSender.sendToken(user.getEmail(),"password-reset",raw);
+            } catch (ApiException ex) {
+                // Never expose account existence by returning a different status for existing emails.
+                resetTokens.delete(saved);
+                log.warn("Password reset email unavailable for userId={}",user.getUserId());
+            }
         });
     }
     @Transactional

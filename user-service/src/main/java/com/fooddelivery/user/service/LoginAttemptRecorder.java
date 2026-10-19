@@ -21,7 +21,7 @@ public class LoginAttemptRecorder {
         attempt.setIdentifierType("EMAIL");
         attempt.setIpAddress(ip == null ? null : ip.substring(0, Math.min(ip.length(),45)));
         attempt.setAttemptStatus(status);
-        attempt.setFailureReason("SUCCESS".equals(status) ? null : "INVALID_CREDENTIALS");
+        attempt.setFailureReason("SUCCESS".equals(status) ? null : ("BLOCKED".equals(status) ? "ACCOUNT_LOCKED" : "INVALID_CREDENTIALS"));
         attempt.setAttemptedAt(LocalDateTime.now(clock));
         repository.save(attempt);
     }

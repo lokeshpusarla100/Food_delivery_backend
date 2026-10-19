@@ -35,6 +35,8 @@ public class AddressService {
     public AddressResponse add(String userId,AddressRequest req) {
         lockUser(userId);
         Long count=jdbc.queryForObject("SELECT COUNT(*) FROM saved_addresses WHERE user_id=?",Long.class,userId);
+        if (count >= 20) throw new ApiException(HttpStatus.BAD_REQUEST,"ADDRESS_LIMIT",
+            "At most 20 saved addresses are supported");
         boolean makeDefault=req.makeDefault() || count==0;
         if(makeDefault) clearDefault(userId);
         KeyHolder keys=new GeneratedKeyHolder();

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +39,7 @@ class UserServiceIntegrationTest {
     }
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
+    @Autowired JdbcTemplate jdbc;
 
     @Test void lifecycleAndSpatialAddressRoundTrip() throws Exception {
         String email="integration+"+UUID.randomUUID()+"@example.com";
@@ -67,6 +69,9 @@ class UserServiceIntegrationTest {
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.data.latitude").value(17.4435))
             .andExpect(jsonPath("$.data.longitude").value(78.3772));
+        var coordinates=jdbc.queryForMap("SELECT latitude,longitude FROM saved_addresses LIMIT 1");
+        assertEquals(17.4435,((Number)coordinates.get("latitude")).doubleValue(),0.00001);
+        assertEquals(78.3772,((Number)coordinates.get("longitude")).doubleValue(),0.00001);
         mvc.perform(get("/api/v1/users/me/addresses").header("Authorization","Bearer "+access))
             .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].isDefault").value(true));
         String refresh=json.writeValueAsString(java.util.Map.of("refreshToken",oldRefresh));

@@ -7,8 +7,8 @@ public final class PreferencesDtos {
     public record PreferencesRequest(
         boolean emailNotifications,boolean smsNotifications, boolean pushNotifications,
         @NotBlank @Size(max=10) String language,
-        @Pattern(regexp="light|dark|auto") String theme,
-        @Pattern(regexp="[A-Z]{3}") String currency,
+        @NotBlank @Pattern(regexp="light|dark|auto") String theme,
+        @NotBlank @Pattern(regexp="[A-Z]{3}") String currency,
         boolean marketingEmails,boolean dataSharingConsent) {}
     public record PreferencesResponse(boolean emailNotifications,boolean smsNotifications,
         boolean pushNotifications,String language,String theme,String currency,
